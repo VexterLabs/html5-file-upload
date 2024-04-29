@@ -1,190 +1,80 @@
-<html>
-<head></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <!-- Required meta tags -->
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+   <title>Page Title</title>
+
+   <!-- Bootstrap CSS -->
+   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+   <!-- required link -->
+   <link rel="stylesheet" href="https://unpkg.com/file-upload-with-preview@4.0.2/dist/file-upload-with-preview.min.css">
+   <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css">
+
+   <script src="https://unpkg.com/file-upload-with-preview@4.0.2/dist/file-upload-with-preview.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+   <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+</head>
 <body>
+   <style>
+      .custom-file-container {
+         max-width: 800px;
+         margin: 0 auto;
+      }
+   </style>
 
+   <div class="card bg-light">
+      <div class="card-header" style="text-align: center;">
+         <h4>File-upload-with-preview-reorder-example</h4>
+      </div>
+      <div class="card-body">
+         <div class="container">
+            <div class="row">
+               <div class="col-md-12">
+                  <div class="custom-file-container" data-upload-id="myUniqueUploadId">
+                     <label>Upload File <a href="javascript:void(0)" class="custom-file-container__image-clear" title="Clear Image">&times;</a></label>
+                     <label class="custom-file-container__custom-file">
+                        <input type="file" class="custom-file-container__custom-file__custom-file-input" accept="*" multiple aria-label="Choose File">
+                        <input type="hidden" name="MAX_FILE_SIZE" value="10485760" />
+                        <span class="custom-file-container__custom-file__custom-file-control"></span>
+                     </label>
+                     <div class="custom-file-container__image-preview" id="sortable-container"></div>
+                     <button id="check-cachedFileArray" class="btn btn-primary">Check cachedFileArray</button>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
 
-<form method="POST" enctype="multipart/form-data">
-
-    <input type="file" name="file" data-preview="#preview" data-dropzone="#dropzone" false>
-
-    <ul id="preview"></ul>
-
-    <div id="dropzone">Drop Zone</div>
-
-    <input type="submit">
-
-</form>
-
-<script id="template" type="text/html">
-    <li>
-        <span class="file-preview-name">{{name}}</span>
-    </li>
-</script>
-
-<script src="https://code.jquery.com/jquery-1.12.1.min.js"></script>
 <script>
-    $.fn.html5file = function (options) {
+   var upload = new FileUploadWithPreview('myUniqueUploadId')
 
-        /**
-         * Allow jQuery to copy event prop for dragndrop
-         */
-        jQuery.event.props.push("dataTransfer");
+   $("#sortable-container").sortable({
+      update: function(event, ui) {
+   // Get the new token order
+   let newTokenOrder = $(this).sortable('toArray', {attribute: 'data-upload-token'})
 
-        var defaultTemplate = '<li><div class="file-preview-name">{{name}}</div><div class="file-size">{{size}}</div><div class="file-type">{{type}}</div><div class="file-preview-img">{{img}}</div></li>';
+   // Init new array that we'll file with the correct order
+   let sortedCachedFileArray = []
 
-        var files = [];
-        var settings = $.extend({
-            'multiple': this.attr('multiple') ? true : false,
-            'dropzone': this.data('dropzone') ? true : false,
-            'preview': this.data('preview') ? true : false,
-            'template': defaultTemplate
-        }, options);
+   // Loop through the newTokenOrder array and add each email in place as found
+   for (let x = 0; x < newTokenOrder.length; x++) {
+      let foundIndex = upload.cachedFileArray.map(image => image.token).indexOf(newTokenOrder[x])
+      sortedCachedFileArray.push(upload.cachedFileArray[foundIndex])
+   }
 
-        /**
-         * Container elements
-         */
-        var $elPreviewContainer = $($(this.data('preview')));
-        var $elDropzoneContainer = $($(this.data('dropzone')));
+   // Replace the cachedFileArray with your new sortedCachedFileArray
+   upload.replaceFiles(sortedCachedFileArray)
+   }
+   });
 
-        /**
-         * Feature detections from Modernizr
-         */
-        var supportsFile = !!(window.File && window.FileList && window.FileReader);
-        var div = document.createElement('div');
-        var supportsDragAndDrop = ('draggable' in div) || ('ondragstart' in div && 'ondrop' in div);
-
-        if (!supportsFile || !supportsDragAndDrop) {
-            return;
-        }
-
-        /**
-         * Create hidden data fields
-         */
-        var fieldName = this.attr('name');
-        this.removeAttr('name');
-        var dataTarget = $('<input type="hidden" name="' + fieldName + '">');
-        this.parent().append(dataTarget);
-        this.parent().append('<input type="hidden" name="html5file" value="true">');
-
-        /**
-         * Listen to change on file input
-         */
-        this.on('change', function (e) {
-            for (var i = 0, numFiles = e.target.files.length; i < numFiles; i++) {
-                var file = e.target.files[i];
-                addFile(file);
-            }
-            generatePreview();
-        });
-
-        /**
-         * Listen to drag-n-drop
-         */
-        if (settings.dropzone && $elDropzoneContainer) {
-            $elDropzoneContainer.on('dragenter', function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-            });
-            $elDropzoneContainer.on('dragover', function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-            });
-            $elDropzoneContainer.on('drop', function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-
-                var dt = e.dataTransfer;
-                var droppedFiles = dt.files;
-
-                for (var i = 0, numFiles = droppedFiles.length; i < numFiles; i++) {
-                    addFile(droppedFiles[i]);
-                }
-                generatePreview();
-            });
-        }
-
-        /**
-         * Add file to files array
-         * @param file
-         */
-        function addFile(file) {
-            if (settings.multiple) {
-                files.push(file);
-            } else {
-                files = [file];
-            }
-        }
-
-        /**
-         * Generate preview
-         */
-        function generatePreview() {
-            $elPreviewContainer.html('');
-            if (settings.preview && $elPreviewContainer) {
-                for (var i = 0, numFiles = files.length; i < numFiles; i++) {
-                    var file = files[i];
-
-                    /**
-                     * Replace values in template
-                     */
-                    var renderedTemplate = settings.template.replace('{{name}}',file.name).replace('{{size}}',file.size).replace('{{type}}',file.type);
-                    var html = $(renderedTemplate);
-
-                    var imageType = /^image\//;
-                    if (!imageType.test(file.type)) {
-                        continue;
-                    }
-
-                    /**
-                     * Handle image elemnt
-                     */
-                    var img = document.createElement("img");
-                    img.file = file;
-
-                    var reader = new FileReader();
-                    reader.onload = (function (aImg, afile) {
-                        return function (e) {
-                            aImg.src = e.target.result;
-                            afile.dataUrl = e.target.result;
-                            encodeImages();
-                        }
-                    })(img, file);
-                    reader.readAsDataURL(file);
-                    html.find(':contains("img")').html(img);
-                    $elPreviewContainer.append(html);
-                }
-            }
-        }
-
-        /**
-         * JSON encode the images an put into the hidden field
-         */
-        function encodeImages() {
-            var imageData = [];
-            for (var i = 0, numFiles = files.length; i < numFiles; i++) {
-                var file = files[i];
-                imageData.push([file.name, file.size, file.type, file.dataUrl]);
-            }
-            dataTarget.val(JSON.stringify(imageData));
-        }
-    };
-
-    $('input[type=file]').html5file();
+   // Check the current status of the `cachedFileArray`
+   $('#check-cachedFileArray').on('click', function() {
+      console.log(upload.cachedFileArray)
+   })
 </script>
-<style>
-    .file-preview-name {
-        font-size: 20px;
-    }
 
-    .file-preview-img img {
-        height: 100px;
-    }
-
-    #dropzone {
-        height: 500px;
-        width: 500px;
-        background-color: red;
-    }
-</style>
 </body>
 </html>
